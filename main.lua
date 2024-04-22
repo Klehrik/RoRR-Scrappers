@@ -12,14 +12,16 @@ local sScrapYellow  = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/
 
 local class_item    = nil
 local class_stage   = nil
-local lang_map      = nil
 
+local create_scrapper = false
 
--- Parameters
 local scrap_names = {"White", "Green", "Red", "Yellow"}
 local scrap_sprites = {sScrapWhite, sScrapGreen, sScrapRed, sScrapYellow}
 
-local max_scrap_amount = 10     -- Upper limit to how many can be scrapped at once
+
+-- Parameters
+local scrapper_chance   = 1
+local max_scrap_amount  = 10    -- Upper limit to how many can be scrapped at once
 
 
 
@@ -61,6 +63,7 @@ local function spawn_command_crate(x, y)
     c.fade_alpha = 0.0
     c.col_index = 0.0
     c.m_id = 0.0
+    c.my_player = -4.0
     c.__custom_id = 0.0
     c.__object_index = 800.0
 
@@ -85,6 +88,7 @@ function spawn_scrap(x, y, rarity)
     base.text2 = item[4]
     base.tier = item[7]
     base.sprite_index = item[8]
+    base.image_speed = 0.0
 end
 
 
@@ -96,7 +100,6 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
         -- Global references
         class_item = gm.variable_global_get("class_item")
         class_stage = gm.variable_global_get("class_stage")
-        lang_map = gm.variable_global_get("_language_map")
     end
 
     -- Create scrap items
@@ -108,6 +111,35 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
             gm.array_set(item, 3, "Prioritized by printers.")
             gm.array_set(item, 6, (i == 4 and 4) or (i - 1))
             gm.array_set(item, 7, scrap_sprites[i])
+        end
+    end
+
+
+    -- Place down scrapper on stage load (check when the player exists)
+    if create_scrapper and Helper.get_client_player() then
+        create_scrapper = false
+
+        -- Prevent scrappers from spawning on the Contact Light
+        if class_stage[gm.variable_global_get("stage_id") + 1][2] ~= "riskOfRain" then
+
+            -- Get valid terrain
+            local blocks = Helper.find_active_instance_all(gm.constants.oB)
+            local tp = Helper.get_teleporter()
+
+            -- Maybe spawn a scrapper
+            if Helper.chance(scrapper_chance) then
+                -- Make sure the scrapper doesn't spawn on the teleporter,
+                -- as that prevents the player from using it
+                while true do
+                    local block = blocks[gm.irandom_range(1, #blocks)]
+                    local x, y = block.bbox_left + gm.irandom_range(0, block.bbox_right - block.bbox_left), block.bbox_top - 1
+                    if gm.point_distance(x, y, tp.x, tp.y) > 64 then
+                        spawn_scrapper(x, y)
+                        break
+                    end
+                end
+            end
+            
         end
     end
 end)
@@ -176,6 +208,7 @@ gm.pre_code_execute(function(self, other, code, result, flags)
                 self.activator.activity_free = true
                 self.activator.activity_move_factor = 1.0
                 self.activator.activity_type = 0.0
+                self.last_move_was_mouse = true
 
 
                 -- Start scrapper animation
@@ -191,20 +224,29 @@ gm.pre_code_execute(function(self, other, code, result, flags)
 end)
 
 
+gm.post_script_hook(gm.constants.stage_roll_next, function(self, other, result, args)
+    create_scrapper = true
+end)
+
+gm.post_script_hook(gm.constants.stage_goto, function(self, other, result, args)
+    create_scrapper = true
+end)
+
+
 -- Debug
--- gui.add_imgui(function()
---     local player = Helper.find_active_instance(gm.constants.oP)
---     if player and ImGui.Begin("Scrappers") then
+gui.add_imgui(function()
+    local player = Helper.find_active_instance(gm.constants.oP)
+    if player and ImGui.Begin("Scrappers") then
 
---         if ImGui.Button("Spawn command crate") then
---             spawn_command_crate(player.x, player.y)
---         elseif ImGui.Button("Spawn scrapper") then
---             spawn_scrapper(player.x, player.y)
---         elseif ImGui.Button("Give white scrap") then
---             for i = 1, 4 do spawn_scrap(player.x, player.y, i) end
---         end
+        if ImGui.Button("Spawn command crate") then
+            spawn_command_crate(player.x, player.y)
+        elseif ImGui.Button("Spawn scrapper") then
+            spawn_scrapper(player.x, player.y)
+        elseif ImGui.Button("Give white scrap") then
+            for i = 1, 4 do spawn_scrap(player.x, player.y, i) end
+        end
 
---     end
+    end
 
---     ImGui.End()
--- end)
+    ImGui.End()
+end)
