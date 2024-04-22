@@ -1,4 +1,7 @@
-desc
+The sequel to Printers mod.  
+Has a 25% chance to spawn on each stage (excluding the Contact Light).  
+
+*Not* tested in multiplayer, and probably won't be synced.  
 
 ---
 
