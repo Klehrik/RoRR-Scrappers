@@ -336,19 +336,19 @@ end)
 
 
 -- Debug
-gui.add_imgui(function()
-    local player = Helper.find_active_instance(gm.constants.oP)
-    if player and ImGui.Begin("Scrappers") then
+-- gui.add_imgui(function()
+--     local player = Helper.find_active_instance(gm.constants.oP)
+--     if player and ImGui.Begin("Scrappers") then
 
-        if ImGui.Button("Spawn command crate") then
-            spawn_command_crate(player.x, player.y)
-        elseif ImGui.Button("Spawn scrapper") then
-            spawn_scrapper(player.x, player.y)
-        elseif ImGui.Button("Give white scrap") then
-            for i = 1, 4 do spawn_scrap(player.x, player.y, i) end
-        end
+--         if ImGui.Button("Spawn command crate") then
+--             spawn_command_crate(player.x, player.y)
+--         elseif ImGui.Button("Spawn scrapper") then
+--             spawn_scrapper(player.x, player.y)
+--         elseif ImGui.Button("Give white scrap") then
+--             for i = 1, 4 do spawn_scrap(player.x, player.y, i) end
+--         end
 
-    end
+--     end
 
-    ImGui.End()
-end)
+--     ImGui.End()
+-- end)
