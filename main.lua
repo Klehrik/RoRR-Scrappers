@@ -4,7 +4,7 @@
 log.info("Successfully loaded ".._ENV["!guid"]..".")
 mods.on_all_mods_loaded(function() for k, v in pairs(mods) do if type(v) == "table" and v.hfuncs then Helper = v end end end)
 
-local sPrinter      = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sPrinter.png", 23, false, false, 36, 48)
+local sScrapper     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapper.png", 23, false, false, 36, 48)
 local sScrapWhite   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapWhite.png", 1, false, false, 16, 16)
 local sScrapGreen   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapGreen.png", 1, false, false, 16, 16)
 local sScrapRed     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapRed.png", 1, false, false, 16, 16)
@@ -13,6 +13,7 @@ local sScrapYellow  = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/
 local class_item    = nil
 local class_stage   = nil
 
+local scrapper_base = gm.constants.oCustomObject_pInteractableCrate
 local create_scrapper = false
 
 local scrap_names = {"White", "Green", "Red", "Yellow"}
@@ -20,15 +21,21 @@ local scrap_sprites = {sScrapWhite, sScrapGreen, sScrapRed, sScrapYellow}
 
 
 -- Parameters
-local scrapper_chance   = 0.25
-local max_scrap_amount  = 10    -- Upper limit to how many can be scrapped at once
+local scrapper_chance       = 0.25
+local max_scrap_amount      = 10    -- Upper limit to how many can be scrapped at once
+
+local animation_held_time   = 80
+local animation_print_time  = 32
+local box_x_offset          = -18   -- Location of the hole of the scrapper relative to the origin
+local box_y_offset          = -22
+local box_input_scale       = 0     -- Item scale when it enters the scrapper
 
 
 
 -- ========== Functions ==========
 
 local function spawn_command_crate(x, y)
-    local c = gm.instance_create_depth(x, y, 1, gm.constants.oCustomObject_pInteractableCrate)
+    local c = gm.instance_create_depth(x, y, 1, scrapper_base)
 
     -- All of the following are absolutely necessary,
     -- and are not set from creating the instance directly
@@ -71,15 +78,20 @@ local function spawn_command_crate(x, y)
 end
 
 
-function spawn_scrapper(x, y)
+local function spawn_scrapper(x, y)
     local s = spawn_command_crate(x, y)
     s.is_scrapper = true
-    s.sprite_index = sPrinter
+    s.sprite_index = sScrapper
     s.text = "Use scrapper"
+    s.image_speed = 0.0
+
+    s.animation_state = nil
+    s.box_x = s.x + box_x_offset
+    s.box_y = s.y + box_y_offset
 end
 
 
-function spawn_scrap(x, y, rarity)
+local function spawn_scrap(x, y, rarity)
     local base = gm.instance_create_depth(x, y, 0, gm.constants.oNugget)
     base.item_id = gm.item_find("scrappers-scrap"..scrap_names[rarity])
 
@@ -88,8 +100,13 @@ function spawn_scrap(x, y, rarity)
     base.text2 = item[4]
     base.tier = item[7]
     base.sprite_index = item[8]
-    base.image_speed = 0.0
 end
+
+
+local function draw_item_sprite(sprite, x, y, scale, alpha)
+    gm.draw_sprite_ext(sprite, 0, x, y, scale or 1.0, scale or 1.0, 0.0, 16777215, alpha or 1.0)
+end
+
 
 
 -- ========== Main ==========
@@ -108,7 +125,7 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
             local id = gm.item_create("scrappers", "scrap"..scrap_names[i])
             local item = class_item[id + 1]
             gm.array_set(item, 2, "Item Scrap ("..scrap_names[i]..")")
-            gm.array_set(item, 3, "Prioritized by printers.")
+            gm.array_set(item, 3, "Does nothing. Prioritized when using printers.")
             gm.array_set(item, 6, (i == 4 and 4) or (i - 1))
             gm.array_set(item, 7, scrap_sprites[i])
         end
@@ -148,6 +165,9 @@ end)
 gm.pre_script_hook(gm.constants.interactable_set_active, function(self, other, result, args)
     -- Check if this is a scrapper
     if self.is_scrapper then
+
+        -- Prevent use if it's already in use
+        if self.animation_state then return false end
 
         local contents = gm.array_create()
         local contents_ids = gm.array_create()
@@ -212,14 +232,96 @@ gm.pre_code_execute(function(self, other, code, result, flags)
 
 
                 -- Start scrapper animation
-                local id = self.contents_ids[self.selection + 1]
-                local count = math.min(self.contents_count[self.selection + 1], max_scrap_amount)
-                local rarity = class_item[id + 1][7]
+                self.taken = self.contents_ids[self.selection + 1]
+                self.taken_count = math.min(self.contents_count[self.selection + 1], max_scrap_amount)
+                self.taken_rarity = class_item[self.taken + 1][7]
 
-                gm.item_take(self.activator, id, count, false)
-                for i = 1, count do spawn_scrap(self.x, self.y, (rarity == 4 and 4) or (rarity + 1)) end
+                self.animation_state = 0
+
+                gm.item_take(self.activator, self.taken, self.taken_count, false)
+                gm.audio_play_sound(gm.constants.wDroneRecycler_Activate, 0, false)
             end
         end
+    end
+end)
+
+
+gm.post_code_execute(function(self, other, code, result, flags)
+    if code.name:match("oInit_Draw_7") then
+
+        -- Loop through all scrappers
+        local base_obj = Helper.find_active_instance_all(scrapper_base)
+        for _, p in ipairs(base_obj) do
+            if p.is_scrapper then
+
+                -- Scrapper animation
+                if p.animation_state then
+
+                    -- Initialize animation stuff
+                    if p.animation_state == 0 then
+                        p.animation_state = 1
+                        p.animation_time = 0
+                        p.animation_items = gm.array_create()
+
+                        for i = 1, p.taken_count do
+                            local offset = ((p.taken_count - 1) * -17) + ((i - 1) * 34)
+                            local array = gm.array_create()
+                            gm.array_push(array, class_item[p.taken + 1][8], offset, -48, 1.0)   -- Sprite, x offset, y offset, scale
+                            gm.array_push(p.animation_items, array)
+                        end
+
+                    -- Draw above player
+                    elseif p.animation_state == 1 then
+                        for _, i in ipairs(p.animation_items) do
+                            draw_item_sprite(i[1], p.activator.x + i[2], p.activator.y + i[3])
+                        end
+
+                        if p.animation_time < animation_held_time then p.animation_time = p.animation_time + 1
+                        else
+                            p.animation_state = 2
+
+                            -- Set offset values to absolute position values
+                            for _, i in ipairs(p.animation_items) do
+                                gm.array_set(i, 1, p.activator.x + i[2])
+                                gm.array_set(i, 2, p.activator.y + i[3])
+                            end
+                        end
+
+                    -- Lerp all items towards hole
+                    elseif p.animation_state == 2 then
+                        for _, i in ipairs(p.animation_items) do
+                            draw_item_sprite(i[1], i[2], i[3], Helper.ease_out(i[4], 3))
+
+                            gm.array_set(i, 1, gm.lerp(i[2], p.box_x, 0.1))
+                            gm.array_set(i, 2, gm.lerp(i[3], p.box_y, 0.1))
+                            gm.array_set(i, 3, gm.lerp(i[4], box_input_scale, 0.1))
+                        end
+
+                        local first = p.animation_items[1]
+                        if gm.point_distance(first[2], first[3], p.box_x, p.box_y) < 1 then
+                            p.animation_state = 3
+                            p.animation_time = 0
+                            gm.audio_play_sound(gm.constants.wDroneRecycler_Recycling, 0, false)
+                        end
+
+                    -- Delay for scrapping sfx
+                    elseif p.animation_state == 3 then
+                        if p.animation_time < animation_print_time then p.animation_time = p.animation_time + 1
+                        else p.animation_state = 4
+                        end
+
+                    -- Create scrap drop(s)
+                    elseif p.animation_state == 4 then
+                        p.animation_state = nil
+
+                        for i = 1, p.taken_count do spawn_scrap(p.box_x, p.box_y, (p.taken_rarity == 4 and 4) or (p.taken_rarity + 1)) end
+
+                    end
+                end
+                
+            end
+        end
+
     end
 end)
 
