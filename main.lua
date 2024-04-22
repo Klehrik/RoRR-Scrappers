@@ -1,14 +1,14 @@
--- Scrappers v1.0.0
+-- Scrappers v1.0.1
 -- Klehrik
 
 log.info("Successfully loaded ".._ENV["!guid"]..".")
 mods.on_all_mods_loaded(function() for k, v in pairs(mods) do if type(v) == "table" and v.hfuncs then Helper = v end end end)
 
 local sScrapper     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapper.png", 1, false, false, 10, 25)
-local sScrapWhite   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapWhite.png", 1, false, false, 16, 16)
-local sScrapGreen   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapGreen.png", 1, false, false, 16, 16)
-local sScrapRed     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapRed.png", 1, false, false, 16, 16)
-local sScrapYellow  = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapYellow.png", 1, false, false, 16, 16)
+local sScrapWhite   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapWhite.png", 1, false, false, 13, 13)
+local sScrapGreen   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapGreen.png", 1, false, false, 13, 13)
+local sScrapRed     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapRed.png", 1, false, false, 13, 13)
+local sScrapYellow  = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapYellow.png", 1, false, false, 13, 13)
 
 local class_item    = nil
 local class_stage   = nil
@@ -21,13 +21,13 @@ local scrap_sprites = {sScrapWhite, sScrapGreen, sScrapRed, sScrapYellow}
 
 
 -- Parameters
-local scrapper_chance       = 0.25
+local scrapper_chance       = 0.3
 local max_scrap_amount      = 10    -- Upper limit to how many can be scrapped at once
 
 local animation_held_time   = 80
 local animation_print_time  = 32
 local box_x_offset          = 0     -- Location of the hole of the scrapper relative to the origin
-local box_y_offset          = -25
+local box_y_offset          = -26
 local box_input_scale       = 0     -- Item scale when it enters the scrapper
 
 
