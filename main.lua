@@ -114,7 +114,6 @@ end
 gm.pre_script_hook(gm.constants.__input_system_tick, function()
     -- Get global references
     if not class_item then
-        -- Global references
         class_item = gm.variable_global_get("class_item")
         class_stage = gm.variable_global_get("class_stage")
     end
@@ -136,24 +135,22 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
     if create_scrapper and Helper.get_client_player() then
         create_scrapper = false
 
-        -- Prevent scrappers from spawning on the Contact Light
-        if class_stage[gm.variable_global_get("stage_id") + 1][2] ~= "riskOfRain" then
+        -- Chance to spawn a scrapper
+        -- Also prevent spawning on the Contact Light
+        if Helper.chance(scrapper_chance) and class_stage[gm.variable_global_get("stage_id") + 1][2] ~= "riskOfRain" then
 
             -- Get valid terrain
             local blocks = Helper.find_active_instance_all(gm.constants.oB)
             local tp = Helper.get_teleporter()
 
-            -- Maybe spawn a scrapper
-            if Helper.chance(scrapper_chance) then
-                -- Make sure the scrapper doesn't spawn on the teleporter,
-                -- as that prevents the player from using it
-                while true do
-                    local block = blocks[gm.irandom_range(1, #blocks)]
-                    local x, y = block.bbox_left + gm.irandom_range(0, block.bbox_right - block.bbox_left), block.bbox_top - 1
-                    if gm.point_distance(x, y, tp.x, tp.y) > 64 then
-                        spawn_scrapper(x, y)
-                        break
-                    end
+            -- Make sure the scrapper doesn't spawn on the teleporter,
+            -- as that prevents the player from using it
+            while true do
+                local block = blocks[gm.irandom_range(1, #blocks)]
+                local x, y = block.bbox_left + gm.irandom_range(0, block.bbox_right - block.bbox_left), block.bbox_top - 1
+                if gm.point_distance(x, y, tp.x, tp.y) > 64 then
+                    spawn_scrapper(x, y)
+                    break
                 end
             end
             
@@ -167,7 +164,10 @@ gm.pre_script_hook(gm.constants.interactable_set_active, function(self, other, r
     if self.is_scrapper then
 
         -- Prevent use if it's already in use
-        if self.animation_state then return false end
+        if self.animation_state then
+            gm.audio_play_sound(gm.constants.wError, 0, false)
+            return false
+        end
 
         local contents = gm.array_create()
         local contents_ids = gm.array_create()
@@ -291,7 +291,7 @@ gm.post_code_execute(function(self, other, code, result, flags)
                     elseif p.animation_state == 2 then
                         for _, i in ipairs(p.animation_items) do
                             draw_item_sprite(i[1], i[2], i[3], Helper.ease_out(i[4], 3))
-
+                            
                             gm.array_set(i, 1, gm.lerp(i[2], p.box_x, 0.1))
                             gm.array_set(i, 2, gm.lerp(i[3], p.box_y, 0.1))
                             gm.array_set(i, 3, gm.lerp(i[4], box_input_scale, 0.1))
