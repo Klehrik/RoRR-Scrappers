@@ -3,6 +3,8 @@ Has a 25% chance to spawn on each stage (excluding the Contact Light).
 
 *Not* tested in multiplayer, and probably won't be synced.  
 
+![Scrapper showcase.gif (this probably won't show up in thunderstore)](https://github.com/Klehrik/RoRR-Printers/blob/main/printer_showcase_2.gif)
+
 ---
 
 ### Installation Instructions
@@ -16,3 +18,4 @@ Install this mod through the Mod Manager:
 
 ### Credits
 * Everybody active in the [Return of Modding server](https://discord.gg/VjS57cszMq).
+* **invenotxnightcatwatcheryuri** for the scrapper sprite.

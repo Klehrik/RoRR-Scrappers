@@ -4,7 +4,7 @@
 log.info("Successfully loaded ".._ENV["!guid"]..".")
 mods.on_all_mods_loaded(function() for k, v in pairs(mods) do if type(v) == "table" and v.hfuncs then Helper = v end end end)
 
-local sScrapper     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapper.png", 23, false, false, 36, 48)
+local sScrapper     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapper.png", 1, false, false, 10, 25)
 local sScrapWhite   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapWhite.png", 1, false, false, 16, 16)
 local sScrapGreen   = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapGreen.png", 1, false, false, 16, 16)
 local sScrapRed     = gm.sprite_add(_ENV["!plugins_mod_folder_path"].."/Sprites/sScrapRed.png", 1, false, false, 16, 16)
@@ -26,8 +26,8 @@ local max_scrap_amount      = 10    -- Upper limit to how many can be scrapped a
 
 local animation_held_time   = 80
 local animation_print_time  = 32
-local box_x_offset          = -18   -- Location of the hole of the scrapper relative to the origin
-local box_y_offset          = -22
+local box_x_offset          = 0     -- Location of the hole of the scrapper relative to the origin
+local box_y_offset          = -25
 local box_input_scale       = 0     -- Item scale when it enters the scrapper
 
 
@@ -147,7 +147,7 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
             -- as that prevents the player from using it
             while true do
                 local block = blocks[gm.irandom_range(1, #blocks)]
-                local x, y = block.bbox_left + gm.irandom_range(0, block.bbox_right - block.bbox_left), block.bbox_top - 1
+                local x, y = (block.bbox_left + 16) + gm.irandom_range(0, block.bbox_right - block.bbox_left - 16), block.bbox_top - 1
                 if gm.point_distance(x, y, tp.x, tp.y) > 64 then
                     spawn_scrapper(x, y)
                     break
@@ -291,7 +291,7 @@ gm.post_code_execute(function(self, other, code, result, flags)
                     elseif p.animation_state == 2 then
                         for _, i in ipairs(p.animation_items) do
                             draw_item_sprite(i[1], i[2], i[3], Helper.ease_out(i[4], 3))
-                            
+
                             gm.array_set(i, 1, gm.lerp(i[2], p.box_x, 0.1))
                             gm.array_set(i, 2, gm.lerp(i[3], p.box_y, 0.1))
                             gm.array_set(i, 3, gm.lerp(i[4], box_input_scale, 0.1))
@@ -346,6 +346,11 @@ end)
 --             spawn_scrapper(player.x, player.y)
 --         elseif ImGui.Button("Give white scrap") then
 --             for i = 1, 4 do spawn_scrap(player.x, player.y, i) end
+--         elseif ImGui.Button("Spawn scrap to the side") then
+--             spawn_scrap(player.x - 64, player.y, 1)
+--             spawn_scrap(player.x - 32, player.y, 2)
+--             spawn_scrap(player.x + 32, player.y, 3)
+--             spawn_scrap(player.x + 64, player.y, 4)
 --         end
 
 --     end
