@@ -20,7 +20,7 @@ local scrap_sprites = {sScrapWhite, sScrapGreen, sScrapRed, sScrapYellow}
 
 
 -- Parameters
-local scrapper_chance   = 1
+local scrapper_chance   = 0.25
 local max_scrap_amount  = 10    -- Upper limit to how many can be scrapped at once
 
 
