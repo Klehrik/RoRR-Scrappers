@@ -3,7 +3,7 @@ Has a 30% chance to spawn on each stage (excluding the Contact Light).
 
 *Not* tested in multiplayer, and probably won't be synced.  
 
-![Scrapper showcase.gif (this probably won't show up in thunderstore)](https://github.com/Klehrik/RoRR-Scrappers/blob/main/scrapper_showcase.gif)
+![Scrapper showcase.gif](https://github.com/Klehrik/RoRR-Scrappers/blob/main/scrapper_showcase.gif?raw=true)
 
 ---
 
