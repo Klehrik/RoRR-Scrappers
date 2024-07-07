@@ -1,7 +1,6 @@
-The sequel to Printers mod.  
-Has a 30% chance to spawn on each stage (excluding the Contact Light).  
+Adds item scrappers from Risk of Rain 2, with a 30% chance to spawn on each stage (excluding the Contact Light).  
 
-*Not* tested in multiplayer, and probably won't be synced.  
+Compatible with online multiplayer.  
 
 ![Scrapper showcase.gif](https://github.com/Klehrik/RoRR-Scrappers/blob/main/scrapper_showcase.gif?raw=true)
 

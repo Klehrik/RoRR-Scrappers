@@ -7,3 +7,7 @@
 
 ### v1.0.2
 * Fixed crash when using r2modman fork
+
+### v1.0.3
+* Now synced in online multiplayer
+* Fixed scrap not dropping when Meat Nugget was toggled off via Item Toggle
