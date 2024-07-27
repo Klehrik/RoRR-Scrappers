@@ -1,4 +1,4 @@
--- Scrappers v1.0.3
+-- Scrappers v1.0.4
 -- Klehrik
 
 log.info("Successfully loaded ".._ENV["!guid"]..".")
@@ -101,9 +101,6 @@ local function spawn_scrap(x, y, rarity)
     if not Helper.is_singleplayer_or_host() then return end
 
     local base = gm.instance_create_depth(x, y, 0, scrap_base)
-
-    log.info(base.x..", "..base.y)
-
     setup_scrap(base, rarity)
 
     -- [Host]  Send setup data to clients
@@ -243,7 +240,6 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
 
 
     -- [All]  Receive selection value and start scrapper animation
-    --        Also unlock scrapper
     while Helper.net_has("Scrapper.selection") do
         local data = Helper.net_listen("Scrapper.selection").data
         local base = get_scrapper(data[1], data[2])
@@ -251,6 +247,14 @@ gm.pre_script_hook(gm.constants.__input_system_tick, function()
             base.selection = data[3]
             start_scrapper_animation(base)
         end
+    end
+
+
+    -- [All]  Reset scrapper variables
+    while Helper.net_has("Scrapper.reset") do
+        local data = Helper.net_listen("Scrapper.reset").data
+        local base = get_scrapper(data[1], data[2])
+        if base then base.force_scrapper_reset = 3 end
     end
 end)
 
@@ -333,6 +337,15 @@ gm.pre_code_execute(function(self, other, code, result, flags)
     -- Check if this is a scrapper
     if self.is_scrapper then
         if code.name:match("oCustomObject_pInteractableCrate_Draw_0") then
+            -- Fix: Force scrapper reset
+            -- I am losing my mind
+            if self.force_scrapper_reset and self.force_scrapper_reset > 0 then
+                self.force_scrapper_reset = self.force_scrapper_reset - 1
+                self.active = 0.0
+                self.activator = -4.0
+                self.animation_state = nil
+            end
+
 
             -- Scrapper is used
             if self.active > 1.0 then
@@ -347,10 +360,27 @@ gm.pre_code_execute(function(self, other, code, result, flags)
                     self.activator.activity_type = 0.0
                     self.last_move_was_mouse = true
 
-                    start_scrapper_animation(self)
+                    -- Start if Cancel (Better Crates mod) was not selected
+                    -- This won't run if Better Crates runs first, which is fine
+                    local cancel = false
 
-                    -- [Net]  Send selection value to other players
-                    if not Helper.is_singleplayer() then Helper.net_send("Scrapper.selection", {self.x, self.y, self.selection}) end
+                    local id = gm.item_find("betterCrates-cancel")
+                    if id and self.contents_ids[self.selection + 1] == id then cancel = true end
+
+                    if not cancel then
+                        start_scrapper_animation(self)
+
+                        -- [Net]  Send selection value to other players
+                        if not Helper.is_singleplayer() then Helper.net_send("Scrapper.selection", {self.x, self.y, self.selection}) end
+
+                    else
+                        self.active = 0.0
+
+                        -- [Net]  Send reset signal to other players
+                        if not Helper.is_singleplayer() then
+                            Helper.net_send("Scrapper.reset", {self.x, self.y})
+                        end
+                    end
                 end
 
             end

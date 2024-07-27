@@ -11,3 +11,6 @@
 ### v1.0.3
 * Now synced in online multiplayer
 * Fixed scrap not dropping when Meat Nugget was toggled off via Item Toggle
+
+### v1.0.4
+* Support for Better Crates mod
