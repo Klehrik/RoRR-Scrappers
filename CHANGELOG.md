@@ -1,3 +1,6 @@
+### v1.0.6
+* Fixed mod not functioning correctly as a result of last patch.
+
 ### v1.0.5
 * Switched to lag-free code_execute hooks.
 

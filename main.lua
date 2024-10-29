@@ -403,7 +403,7 @@ function start_scrapper_animation(scrapper)
 end
 
 
-gm.post_code_execute("gml_Object_oInit_Draw_7", function(self, other)
+gm.post_code_execute("gml_Object_oInit_Draw_73", function(self, other)
     -- Loop through all scrappers
     local base_obj = Helper.find_active_instance_all(scrapper_base)
     for _, p in ipairs(base_obj) do
