@@ -1,4 +1,4 @@
--- Scrappers v1.0.4
+-- Scrappers
 -- Klehrik
 
 log.info("Successfully loaded ".._ENV["!guid"]..".")
@@ -333,57 +333,55 @@ function get_contents(player)
 end
 
 
-gm.pre_code_execute(function(self, other, code, result, flags)
+gm.pre_code_execute("gml_Object_oCustomObject_pInteractableCrate_Draw_0", function(self, other)
     -- Check if this is a scrapper
     if self.is_scrapper then
-        if code.name:match("oCustomObject_pInteractableCrate_Draw_0") then
-            -- Fix: Force scrapper reset
-            -- I am losing my mind
-            if self.force_scrapper_reset and self.force_scrapper_reset > 0 then
-                self.force_scrapper_reset = self.force_scrapper_reset - 1
-                self.active = 0.0
-                self.activator = -4.0
-                self.animation_state = nil
-            end
+        -- Fix: Force scrapper reset
+        -- I am losing my mind
+        if self.force_scrapper_reset and self.force_scrapper_reset > 0 then
+            self.force_scrapper_reset = self.force_scrapper_reset - 1
+            self.active = 0.0
+            self.activator = -4.0
+            self.animation_state = nil
+        end
 
 
-            -- Scrapper is used
-            if self.active > 1.0 then
-                self.active = 0.1
-                self.animation_state = 0
+        -- Scrapper is used
+        if self.active > 1.0 then
+            self.active = 0.1
+            self.animation_state = 0
 
-                if Helper.get_client_player() == self.activator then
-                    -- Give back player control
-                    self.activator.activity = 0.0
-                    self.activator.activity_free = true
-                    self.activator.activity_move_factor = 1.0
-                    self.activator.activity_type = 0.0
-                    self.last_move_was_mouse = true
+            if Helper.get_client_player() == self.activator then
+                -- Give back player control
+                self.activator.activity = 0.0
+                self.activator.activity_free = true
+                self.activator.activity_move_factor = 1.0
+                self.activator.activity_type = 0.0
+                self.last_move_was_mouse = true
 
-                    -- Start if Cancel (Better Crates mod) was not selected
-                    -- This won't run if Better Crates runs first, which is fine
-                    local cancel = false
+                -- Start if Cancel (Better Crates mod) was not selected
+                -- This won't run if Better Crates runs first, which is fine
+                local cancel = false
 
-                    local id = gm.item_find("betterCrates-cancel")
-                    if id and self.contents_ids[self.selection + 1] == id then cancel = true end
+                local id = gm.item_find("betterCrates-cancel")
+                if id and self.contents_ids[self.selection + 1] == id then cancel = true end
 
-                    if not cancel then
-                        start_scrapper_animation(self)
+                if not cancel then
+                    start_scrapper_animation(self)
 
-                        -- [Net]  Send selection value to other players
-                        if not Helper.is_singleplayer() then Helper.net_send("Scrapper.selection", {self.x, self.y, self.selection}) end
+                    -- [Net]  Send selection value to other players
+                    if not Helper.is_singleplayer() then Helper.net_send("Scrapper.selection", {self.x, self.y, self.selection}) end
 
-                    else
-                        self.active = 0.0
+                else
+                    self.active = 0.0
 
-                        -- [Net]  Send reset signal to other players
-                        if not Helper.is_singleplayer() then
-                            Helper.net_send("Scrapper.reset", {self.x, self.y})
-                        end
+                    -- [Net]  Send reset signal to other players
+                    if not Helper.is_singleplayer() then
+                        Helper.net_send("Scrapper.reset", {self.x, self.y})
                     end
                 end
-
             end
+
         end
     end
 end)
@@ -405,83 +403,79 @@ function start_scrapper_animation(scrapper)
 end
 
 
-gm.post_code_execute(function(self, other, code, result, flags)
-    if code.name:match("oInit_Draw_7") then
+gm.post_code_execute("gml_Object_oInit_Draw_7", function(self, other)
+    -- Loop through all scrappers
+    local base_obj = Helper.find_active_instance_all(scrapper_base)
+    for _, p in ipairs(base_obj) do
+        if p.is_scrapper then
 
-        -- Loop through all scrappers
-        local base_obj = Helper.find_active_instance_all(scrapper_base)
-        for _, p in ipairs(base_obj) do
-            if p.is_scrapper then
+            -- Scrapper animation
+            if p.animation_state then
 
-                -- Scrapper animation
-                if p.animation_state then
+                -- Initialize animation stuff
+                if p.animation_state == 1 then
+                    p.animation_state = 2
+                    p.animation_time = 0
+                    p.animation_items = gm.array_create()
 
-                    -- Initialize animation stuff
-                    if p.animation_state == 1 then
-                        p.animation_state = 2
-                        p.animation_time = 0
-                        p.animation_items = gm.array_create()
-
-                        for i = 1, p.taken_count do
-                            local offset = ((p.taken_count - 1) * -17) + ((i - 1) * 34)
-                            local array = gm.array_create()
-                            gm.array_push(array, class_item[p.taken + 1][8], offset, -48, 1.0)   -- Sprite, x offset, y offset, scale
-                            gm.array_push(p.animation_items, array)
-                        end
-
-                    -- Draw above player
-                    elseif p.animation_state == 2 then
-                        for _, i in ipairs(p.animation_items) do
-                            draw_item_sprite(i[1], p.activator.x + i[2], p.activator.y + i[3])
-                        end
-
-                        if p.animation_time < animation_held_time then p.animation_time = p.animation_time + 1
-                        else
-                            p.animation_state = 3
-
-                            -- Set offset values to absolute position values
-                            for _, i in ipairs(p.animation_items) do
-                                gm.array_set(i, 1, p.activator.x + i[2])
-                                gm.array_set(i, 2, p.activator.y + i[3])
-                            end
-                        end
-
-                    -- Lerp all items towards hole
-                    elseif p.animation_state == 3 then
-                        for _, i in ipairs(p.animation_items) do
-                            draw_item_sprite(i[1], i[2], i[3], Helper.ease_out(i[4], 3))
-
-                            gm.array_set(i, 1, gm.lerp(i[2], p.box_x, 0.1))
-                            gm.array_set(i, 2, gm.lerp(i[3], p.box_y, 0.1))
-                            gm.array_set(i, 3, gm.lerp(i[4], box_input_scale, 0.1))
-                        end
-
-                        local first = p.animation_items[1]
-                        if gm.point_distance(first[2], first[3], p.box_x, p.box_y) < 1 then
-                            p.animation_state = 4
-                            p.animation_time = 0
-                            gm.audio_play_sound(gm.constants.wDroneRecycler_Recycling, 0, false)
-                        end
-
-                    -- Delay for scrapping sfx
-                    elseif p.animation_state == 4 then
-                        if p.animation_time < animation_print_time then p.animation_time = p.animation_time + 1
-                        else p.animation_state = 5
-                        end
-
-                    -- Create scrap drop(s)
-                    elseif p.animation_state == 5 then
-                        p.animation_state = nil
-                        p.activator = -4.0
-
-                        for i = 1, p.taken_count do spawn_scrap(p.box_x, p.box_y, (p.taken_rarity == 4 and 4) or (p.taken_rarity + 1)) end
-
+                    for i = 1, p.taken_count do
+                        local offset = ((p.taken_count - 1) * -17) + ((i - 1) * 34)
+                        local array = gm.array_create()
+                        gm.array_push(array, class_item[p.taken + 1][8], offset, -48, 1.0)   -- Sprite, x offset, y offset, scale
+                        gm.array_push(p.animation_items, array)
                     end
-                end
-                
-            end
-        end
 
+                -- Draw above player
+                elseif p.animation_state == 2 then
+                    for _, i in ipairs(p.animation_items) do
+                        draw_item_sprite(i[1], p.activator.x + i[2], p.activator.y + i[3])
+                    end
+
+                    if p.animation_time < animation_held_time then p.animation_time = p.animation_time + 1
+                    else
+                        p.animation_state = 3
+
+                        -- Set offset values to absolute position values
+                        for _, i in ipairs(p.animation_items) do
+                            gm.array_set(i, 1, p.activator.x + i[2])
+                            gm.array_set(i, 2, p.activator.y + i[3])
+                        end
+                    end
+
+                -- Lerp all items towards hole
+                elseif p.animation_state == 3 then
+                    for _, i in ipairs(p.animation_items) do
+                        draw_item_sprite(i[1], i[2], i[3], Helper.ease_out(i[4], 3))
+
+                        gm.array_set(i, 1, gm.lerp(i[2], p.box_x, 0.1))
+                        gm.array_set(i, 2, gm.lerp(i[3], p.box_y, 0.1))
+                        gm.array_set(i, 3, gm.lerp(i[4], box_input_scale, 0.1))
+                    end
+
+                    local first = p.animation_items[1]
+                    if gm.point_distance(first[2], first[3], p.box_x, p.box_y) < 1 then
+                        p.animation_state = 4
+                        p.animation_time = 0
+                        gm.audio_play_sound(gm.constants.wDroneRecycler_Recycling, 0, false)
+                    end
+
+                -- Delay for scrapping sfx
+                elseif p.animation_state == 4 then
+                    if p.animation_time < animation_print_time then p.animation_time = p.animation_time + 1
+                    else p.animation_state = 5
+                    end
+
+                -- Create scrap drop(s)
+                elseif p.animation_state == 5 then
+                    p.animation_state = nil
+                    p.activator = -4.0
+
+                    for i = 1, p.taken_count do spawn_scrap(p.box_x, p.box_y, (p.taken_rarity == 4 and 4) or (p.taken_rarity + 1)) end
+
+                end
+            end
+            
+        end
     end
 end)
 
